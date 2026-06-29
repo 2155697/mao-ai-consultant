@@ -3,194 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>教员 - 一对一AI咨询</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<script src="https://cdn.tailwindcss.com"></script>
+<title>教员 - 一对一AI咨询 v2.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-html,body,#root { height:100%; width:100%; overflow:hidden; }
-body { font-family:'Inter',system-ui,sans-serif; background:#0a0a0a; color:#e5e5e5; }
+*{margin:0;padding:0;box-sizing:border-box}
+html,body,#root{height:100%;width:100%;overflow:hidden;font-family:'Inter',system-ui,sans-serif;background:#0a0a0a;color:#e5e5e5}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:#333;border-radius:2px}
+::selection{background:rgba(220,38,38,0.3);color:#fff}
 
-/* Scrollbar */
-::-webkit-scrollbar { width:3px; }
-::-webkit-scrollbar-thumb { background:#333; border-radius:2px; }
-::selection { background:rgba(220,38,38,0.3); color:#fff; }
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
+@keyframes nodeGrow{from{opacity:0;transform:scale(0.5)}to{opacity:1;transform:scale(1)}}
+@keyframes cardSlide{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+@keyframes glow{0%{box-shadow:0 0 5px rgba(220,38,38,0.2)}100%{box-shadow:0 0 15px rgba(220,38,38,0.4)}}
 
-/* Animations */
-@keyframes glow { 0%{box-shadow:0 0 5px rgba(220,38,38,0.2)} 100%{box-shadow:0 0 15px rgba(220,38,38,0.4),0 0 30px rgba(220,38,38,0.1)} }
-@keyframes slideUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-@keyframes fadeIn { from{opacity:0} to{opacity:1} }
-@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
-@keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(220,38,38,0.4)} 70%{box-shadow:0 0 0 8px rgba(220,38,38,0)} 100%{box-shadow:0 0 0 0 rgba(220,38,38,0)} }
-@keyframes blink { 0%,50%{opacity:1} 51%,100%{opacity:0} }
-@keyframes node-grow { from{opacity:0;transform:scale(0.5)} to{opacity:1;transform:scale(1)} }
-@keyframes line-draw { from{stroke-dashoffset:100} to{stroke-dashoffset:0} }
-@keyframes card-slide { from{opacity:0;transform:translateX(30px)} to{opacity:1;transform:translateX(0)} }
+.su{animation:slideUp 0.4s ease-out both}
+.fi{animation:fadeIn 0.3s ease-out both}
+.gc{font-family:'Noto Serif SC',Georgia,serif}
+.gt{background:linear-gradient(135deg,#f87171,#dc2626,#fbbf24);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.glass{background:rgba(20,20,20,0.85);backdrop-filter:blur(12px)}
 
-.animate-glow { animation:glow 2s ease-in-out infinite alternate }
-.animate-slide-up { animation:slideUp 0.4s ease-out both }
-.animate-fade-in { animation:fadeIn 0.3s ease-out both }
-.animate-shimmer { background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent); background-size:200% 100%; animation:shimmer 2s linear infinite }
-.animate-pulse-ring { animation:pulse-ring 2s infinite }
-
-/* Progress bar */
-.progress-track { position:relative; height:2px; background:#1a1a1a; overflow:hidden }
-.progress-fill { height:100%; background:linear-gradient(90deg,#7f1d1d,#dc2626,#f59e0b); transition:width 0.8s cubic-bezier(0.4,0,0.2,1) }
+/* Progress */
+.pt{position:relative;height:2px;background:#1a1a1a;overflow:hidden}
+.pf{height:100%;background:linear-gradient(90deg,#7f1d1d,#dc2626,#f59e0b);transition:width 0.8s cubic-bezier(0.4,0,0.2,1)}
+.psh{background:linear-gradient(90deg,transparent,rgba(255,255,255,0.15),transparent);background-size:200% 100%;animation:shimmer 2s linear infinite;position:absolute;top:0;height:100%;width:60px}
 
 /* Thinking stream */
-.thinking-item { padding:6px 12px; border-radius:8px; margin-bottom:4px; font-size:13px; line-height:1.6; animation:slideUp 0.3s ease-out both }
-.thinking-item.revert { background:rgba(220,38,38,0.08); border-left:2px solid #dc2626 }
-.thinking-item.normal { background:rgba(255,255,255,0.02) }
-.thinking-item .revert-line { text-decoration:line-through; opacity:0.4 }
+.ti{padding:6px 12px;border-radius:8px;margin-bottom:4px;font-size:13px;line-height:1.6;animation:slideUp 0.3s ease-out both}
+.ti.rv{background:rgba(220,38,38,0.08);border-left:2px solid #dc2626}
+.ti.nm{background:rgba(255,255,255,0.02)}
+.ti .rl{text-decoration:line-through;opacity:0.4}
+.tc::after{content:'|';animation:blink 1s infinite;color:#dc2626;margin-left:2px}
 
-/* Cursor */
-.typing-cursor::after { content:'|'; animation:blink 1s infinite; color:#dc2626; margin-left:2px }
-
-/* Cognitive graph nodes */
-.cog-node { animation:node-grow 0.5s ease-out both; border-radius:10px; padding:8px 12px; font-size:12px; margin-bottom:8px; position:relative }
-.cog-node.main_contradiction { background:rgba(220,38,38,0.15); border:1px solid rgba(220,38,38,0.4); color:#f87171 }
-.cog-node.insight { background:rgba(168,85,247,0.12); border:1px solid rgba(168,85,247,0.3); color:#c084fc }
-.cog-node.breakthrough { background:rgba(245,158,11,0.12); border:1px solid rgba(245,158,11,0.3); color:#fbbf24 }
-.cog-node.conclusion { background:rgba(34,197,94,0.1); border:1px solid rgba(34,197,94,0.3); color:#4ade80 }
+/* Cognitive graph */
+.cn{animation:nodeGrow 0.5s ease-out both;border-radius:10px;padding:8px 12px;font-size:12px;margin-bottom:8px}
+.cn.mc{background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.4);color:#f87171}
+.cn.in{background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);color:#c084fc}
+.cn.bt{background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#fbbf24}
+.cn.cl{background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.3);color:#4ade80}
 
 /* Mao quote card */
-.mao-card { animation:card-slide 0.5s ease-out both; border-left:3px solid #dc2626; background:rgba(220,38,38,0.05); padding:12px 16px; border-radius:0 8px 8px 0; margin-bottom:8px }
-
-/* Gradient text */
-.gradient-text { background:linear-gradient(135deg,#f87171,#dc2626,#fbbf24); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text }
-
-/* Glass */
-.glass { background:rgba(20,20,20,0.85); backdrop-filter:blur(12px) }
+.mq{animation:cardSlide 0.5s ease-out both;border-left:3px solid #dc2626;background:rgba(220,38,38,0.05);padding:12px 16px;border-radius:0 8px 8px 0;margin-bottom:8px}
 </style>
 </head>
 <body>
 <div id="root"></div>
-
-<script type="text/babel">
-const { useState, useRef, useEffect, useCallback } = React;
-const API_BASE = window.location.hostname === 'localhost' ? 'http://localhost:8000/api/v1' : '/api/v1';
-
-// ===== Icons =====
-const I = {
-  Book:()=>\<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>,
-  Send:()=>\<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>,
-  Loader:()=>\<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
-  Sparkle:()=>\<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>,
-  Zap:()=>\<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>,
-};
-
-// ===== Progress Bar =====
-function ProgressBar({ pct, phase }) {
-  return (
-    <div className="w-full progress-track">
-      <div className="progress-fill animate-shimmer" style={{width:`${Math.min(pct,100)}%`}}/>
-    </div>
-  );
-}
-
-// ===== Thinking Stream =====
-function ThinkingStream({ events }) {
-  const scrollRef = useRef(null);
-  useEffect(()=>{ scrollRef.current?.scrollTo(0,scrollRef.current.scrollHeight); },[events]);
-
-  return (
-    <div ref={scrollRef} className="flex-1 overflow-y-auto p-3">
-      <div className="text-xs text-gray-600 mb-2 font-medium tracking-wider">💭 思考流</div>
-      {events.length===0 && <div className="text-gray-700 text-sm italic">等待思考...</div>}
-      {events.map((e,i)=>(
-        <div key={i} className={`thinking-item ${e.is_revert?'revert':'normal'}`} style={{animationDelay:`${i*0.05}s`}}>
-          <span className="mr-2">{e.emotion}</span>
-          <span className={e.is_revert?'revert-line':'text-gray-300'}>{e.text}</span>
-          {e.is_revert && <span className="text-mao-400 text-xs ml-2">(修正)</span>}
-        </div>
-      ))}
-      {events.length>0 && <div className="typing-cursor mt-2"/>}
-    </div>
-  );
-}
-
-// ===== Cognitive Graph =====
-function CognitiveGraph({ graphData }) {
-  if (!graphData || !graphData.nodes || graphData.nodes.length===0) {
-    return (
-      <div className="flex-1 p-3">
-        <div className="text-xs text-gray-600 mb-2 font-medium tracking-wider">🧠 认知结构</div>
-        <div className="text-gray-700 text-sm italic">认知结构随思考演化...</div>
-      </div>
-    );
-  }
-
-  const colorMap = { main_contradiction:'#dc2626', insight:'#a855f7', breakthrough:'#f59e0b', conclusion:'#22c55e', question:'#6b7280' };
-
-  return (
-    <div className="flex-1 p-3 overflow-y-auto">
-      <div className="text-xs text-gray-600 mb-2 font-medium tracking-wider">🧠 认知结构</div>
-      <div className="space-y-2">
-        {graphData.nodes.map((node,i)=>(
-          <div key={node.id} className={`cog-node ${node.type}`} style={{animationDelay:`${i*0.15}s`}}>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full" style={{background:colorMap[node.type]||'#6b7280'}}/>
-              <span className="text-xs font-medium opacity-70">{node.type==='main_contradiction'?'主要矛盾':node.type==='insight'?'洞察':node.type==='breakthrough'?'突破口':node.type==='conclusion'?'结论':'?'}</span>
-            </div>
-            <div className="text-sm leading-relaxed">{node.full_content}</div>
-          </div>
-        ))}
-      </div>
-      {/* SVG connections */}
-      {graphData.edges && graphData.edges.length>0 && (
-        <svg className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
-          {graphData.edges.map((e,i)=>(
-            <line key={i} x1="20" y1={i*60+30} x2="20" y2={(i+1)*60+30} stroke="#dc2626" strokeWidth="1" strokeDasharray="4"/>
-          ))}
-        </svg>
-      )}
-    </div>
-  );
-}
-
-// ===== Mao Quote Cards =====
-function MaoQuoteCards({ quotes }) {
-  if (!quotes || quotes.length===0) return null;
-
-  return (
-    <div className="p-3 border-t border-gray-800">
-      <div className="text-xs text-gray-600 mb-2 font-medium tracking-wider">📖 毛选原文</div>
-      <div className="space-y-2">
-        {quotes.map((q,i)=>(
-          <div key={i} className="mao-card" style={{animationDelay:`${i*0.2}s`}}>
-            <p className="text-gray-300 text-sm italic leading-relaxed">"{q.text}"</p>
-            <p className="text-gray-500 text-xs mt-1">——{q.source} · {q.date}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+<script>
+const {useState,useRef,useEffect,useCallback}=React;
+const API_BASE=window.location.hostname==='localhost'?'http://localhost:8000/api/v1':'/api/v1';
 
 // ===== Main App =====
-function App() {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [phase, setPhase] = useState('idle');
-  const [thinkingEvents, setThinkingEvents] = useState([]);
-  const [cognitiveGraph, setCognitiveGraph] = useState(null);
-  const [maoQuotes, setMaoQuotes] = useState([]);
-  const [showWelcome, setShowWelcome] = useState(true);
-  const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+function App(){
+  const [messages,setMessages]=useState([]);
+  const [input,setInput]=useState('');
+  const [isLoading,setIsLoading]=useState(false);
+  const [progress,setProgress]=useState(0);
+  const [phase,setPhase]=useState('idle');
+  const [thinkingEvents,setThinkingEvents]=useState([]);
+  const [cognitiveGraph,setCognitiveGraph]=useState(null);
+  const [maoQuotes,setMaoQuotes]=useState([]);
+  const [showWelcome,setShowWelcome]=useState(true);
+  const messagesEndRef=useRef(null);
 
-  useEffect(()=>{ messagesEndRef.current?.scrollIntoView({behavior:'smooth'}); },[messages]);
+  useEffect(()=>{messagesEndRef.current?.scrollIntoView({behavior:'smooth'})},[messages]);
 
-  const handleSend = useCallback(async ()=>{
-    if(!input.trim()||isLoading) return;
-
-    const userMsg = { id:Date.now().toString(), role:'user', content:input.trim() };
-    setMessages(p=>[...p, userMsg]);
+  const handleSend=useCallback(async()=>{
+    if(!input.trim()||isLoading)return;
+    const userMsg={id:Date.now().toString(),role:'user',content:input.trim()};
+    setMessages(p=>[...p,userMsg]);
     setInput('');
     setIsLoading(true);
     setShowWelcome(false);
@@ -200,200 +83,255 @@ function App() {
     setProgress(0);
     setPhase('thinking');
 
-    let assistantContent = '';
+    let assistantContent='';
+    let assistantId=(Date.now()+1).toString();
 
-    try {
-      const resp = await fetch(`${API_BASE}/chat/stream`, {
+    try{
+      const resp=await fetch(`${API_BASE}/chat/stream`,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({ message:userMsg.content, stream:true })
+        body:JSON.stringify({message:userMsg.content,stream:true})
       });
 
-      const reader = resp.body.getReader();
-      const decoder = new TextDecoder();
-      let assistantId = (Date.now()+1).toString();
+      const reader=resp.body.getReader();
+      const decoder=new TextDecoder();
 
-      while(true) {
-        const {done,value} = await reader.read();
-        if(done) break;
+      while(true){
+        const {done,value}=await reader.read();
+        if(done)break;
 
-        const chunk = decoder.decode(value, {stream:true});
-        const lines = chunk.split('\n\n');
+        const chunk=decoder.decode(value,{stream:true});
+        const lines=chunk.split('\n\n');
 
-        for(const line of lines) {
-          if(!line.trim()||!line.startsWith('data:')) continue;
-          try {
-            const data = JSON.parse(line.slice(5));
+        for(const line of lines){
+          if(!line.trim()||!line.startsWith('data:'))continue;
+          try{
+            const data=JSON.parse(line.slice(5));
+            const t=data.type;
 
-            if(data.type==='thinking_stream' && data.thinking_step) {
-              setThinkingEvents(p=>[...p, {
-                text:data.thinking_step.content||data.data,
+            // ===== v2: 思考流事件 =====
+            if(t==='thinking_stream'&&data.thinking_step){
+              setThinkingEvents(p=>[...p,{
+                text:data.thinking_step.content||data.data||'',
                 emotion:data.thinking_step.name||'🤔',
-                is_revert:(data.thinking_step.name||'')==='🔄',
+                is_revert:(data.thinking_step.name||'')==='🔄'
               }]);
-              setProgress(Math.min(50, data.overall_percentage||25));
-
-            } else if(data.type==='cognitive_structure' && data.thinking_step) {
-              try {
-                const graph = JSON.parse(data.thinking_step.content);
+              setProgress(p=>Math.min(45,p+3));
+            }
+            // ===== v2: 认知结构 =====
+            else if(t==='cognitive_structure'&&data.thinking_step){
+              try{
+                const graph=JSON.parse(data.thinking_step.content);
                 setCognitiveGraph(graph);
-              } catch(e){}
+              }catch(e){}
               setProgress(60);
-
-            } else if(data.type==='mao_quote' && data.thinking_step) {
-              const text = data.data||data.thinking_step.mao_quote||'';
-              const source = data.thinking_step.content||'';
-              const date = data.thinking_step.description||'';
-              if(text) {
-                setMaoQuotes(p=>[...p, { text, source, date }]);
+            }
+            // ===== v2: 毛选原文 =====
+            else if(t==='mao_quote'&&data.thinking_step){
+              const text=data.data||data.thinking_step.mao_quote||'';
+              const source=data.thinking_step.content||'';
+              const date=data.thinking_step.description||'';
+              if(text){
+                setMaoQuotes(p=>{
+                  // 去重
+                  if(p.some(q=>q.text===text))return p;
+                  return [...p,{text,source,date}];
+                });
               }
               setProgress(70);
-
-            } else if(data.type==='content' && data.data) {
+            }
+            // ===== v1兼容: thinking步骤 =====
+            else if(t==='thinking'&&data.thinking_step){
+              // 转化为thinking_stream格式
+              setThinkingEvents(p=>[...p,{
+                text:data.thinking_step.content||data.thinking_step.description,
+                emotion:'🤔',
+                is_revert:false
+              }]);
+              setProgress(data.overall_percentage||50);
+            }
+            // ===== 内容输出 =====
+            else if(t==='content'&&data.data){
               setPhase('writing');
-              assistantContent += data.data;
-              setProgress(p=>Math.min(95, p+2));
+              assistantContent+=data.data;
+              setProgress(p=>Math.min(95,p+1));
               setMessages(p=>{
-                const last = p[p.length-1];
-                if(last?.role==='assistant' && last.id===assistantId) {
-                  const u=[...p]; u[u.length-1]={...last, content:assistantContent}; return u;
+                const last=p[p.length-1];
+                if(last?.role==='assistant'&&last.id===assistantId){
+                  const u=[...p];u[u.length-1]={...last,content:assistantContent};return u;
                 }
-                return [...p, {id:assistantId, role:'assistant', content:assistantContent}];
+                return[...p,{id:assistantId,role:'assistant',content:assistantContent}];
               });
-
-            } else if(data.type==='done') {
+            }
+            // ===== 完成 =====
+            else if(t==='done'){
               setPhase('done');
               setProgress(100);
-
-            } else if(data.type==='error') {
-              throw new Error(data.error||'未知错误');
             }
-          } catch(e){}
+            // ===== 错误 =====
+            else if(t==='error'){
+              setMessages(p=>[...p,{id:(Date.now()+2).toString(),role:'assistant',content:`小同志，出了点问题：${data.error||'未知错误'}`}]);
+            }
+          }catch(e){}
         }
       }
-    } catch(err) {
-      setMessages(p=>[...p, {id:(Date.now()+2).toString(), role:'assistant', content:`小同志，出了点问题：${err.message}`}]);
-    } finally {
+    }catch(err){
+      setMessages(p=>[...p,{id:(Date.now()+2).toString(),role:'assistant',content:`小同志，网络出了点问题：${err.message}`}]);
+    }finally{
       setIsLoading(false);
       setPhase('idle');
     }
-  }, [input, isLoading]);
+  },[input,isLoading]);
 
-  const handleKey = (e)=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend();} };
+  const handleKey=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend()}};
 
-  return (
-    <div className="h-screen w-screen bg-[#0a0a0a] flex flex-col overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between px-5 py-3 border-b border-[#1a1a1a] glass z-10">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#991b1b] to-[#450a0a] flex items-center justify-center border border-[#dc2626]/30 animate-glow">
-            <span className="text-[#fbbf24]"><I.Book/></span>
-          </div>
-          <div>
-            <h1 className="text-base font-bold text-white tracking-wide">教员<span className="text-[#f87171] text-xs font-normal ml-2">AI咨询</span></h1>
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"/>
-              <span>人格蒸馏v2 · Kimi K2.6</span>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-[10px] text-gray-700">
-          <I.Zap/><span>{phase==='thinking'?'思考中...':phase==='writing'?'输出中...':'就绪'}</span>
-        </div>
-      </header>
+  return React.createElement('div',{className:'h-screen w-screen bg-[#0a0a0a] flex flex-col overflow-hidden'},
+    // Header
+    React.createElement('header',{className:'flex items-center justify-between px-5 py-3 border-b border-[#1a1a1a] glass z-10'},
+      React.createElement('div',{className:'flex items-center gap-3'},
+        React.createElement('div',{className:'w-9 h-9 rounded-full bg-gradient-to-br from-[#991b1b] to-[#450a0a] flex items-center justify-center border border-[#dc2626]/30',style:{animation:'glow 2s ease-in-out infinite alternate'}},
+          React.createElement('span',{className:'text-[#fbbf24]',dangerouslySetInnerHTML:{__html:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>'}})
+        ),
+        React.createElement('div',null,
+          React.createElement('h1',{className:'text-base font-bold text-white tracking-wide'},'教员',React.createElement('span',{className:'text-[#f87171] text-xs font-normal ml-2'},'AI咨询 v2.0')),
+          React.createElement('div',{className:'flex items-center gap-1.5 text-[10px] text-gray-600'},
+            React.createElement('span',{className:'w-1.5 h-1.5 rounded-full bg-green-500',style:{animation:'blink 2s infinite'}}),
+            React.createElement('span',null,'人格蒸馏 · 三层认知架构')
+          )
+        )
+      ),
+      React.createElement('div',{className:'text-[10px] text-gray-700'},
+        phase==='thinking'?'💭 思考中...':phase==='writing'?'✍️ 输出中...':'⚡ 就绪'
+      )
+    ),
 
-      {/* Progress Bar */}
-      <ProgressBar pct={progress} phase={phase}/>
+    // Progress Bar
+    React.createElement('div',{className:'w-full pt'},
+      React.createElement('div',{className:'pf',style:{width:`${Math.min(progress,100)}%`}}),
+      progress>0&&progress<100&&React.createElement('div',{className:'psh'})
+    ),
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Messages Panel */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-            {showWelcome && messages.length===0 && (
-              <div className="flex flex-col items-center justify-center h-full gap-6 animate-fade-in">
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#b91c1c] via-[#7f1d1d] to-[#0a0a0a] flex items-center justify-center border-2 border-[#b91c1c]/40">
-                    <span className="text-[#fbbf24] scale-125"><I.Book/></span>
-                  </div>
-                </div>
-                <div className="text-center space-y-2">
-                  <h2 className="text-2xl font-bold gradient-text font-serif">小同志，你遇到什么问题</h2>
-                  <p className="text-gray-600 text-sm">说来听听，我帮你分析分析</p>
-                </div>
-                <div className="grid grid-cols-1 gap-2 w-full max-w-sm">
-                  {['最近工作压力很大','不知道该怎么选择','想学习提升自己'].map((q,i)=>(
-                    <button key={i} onClick={()=>{setInput(q);}} className="text-left px-4 py-2.5 rounded-lg bg-[#141414] border border-[#262626] text-sm text-gray-500 hover:text-white hover:border-[#b91c1c]/40 transition-all">
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+    // Main Content
+    React.createElement('div',{className:'flex-1 flex overflow-hidden'},
+      // Messages Panel
+      React.createElement('div',{className:'flex-1 flex flex-col min-w-0'},
+        React.createElement('div',{className:'flex-1 overflow-y-auto px-4 py-4 space-y-4'},
+          showWelcome&&messages.length===0&&React.createElement('div',{className:'flex flex-col items-center justify-center h-full gap-6 fi'},
+            React.createElement('div',{className:'relative'},
+              React.createElement('div',{className:'w-20 h-20 rounded-full bg-gradient-to-br from-[#b91c1c] via-[#7f1d1d] to-[#0a0a0a] flex items-center justify-center border-2 border-[#b91c1c]/40'},
+                React.createElement('span',{className:'text-[#fbbf24] text-2xl'},'☭')
+              )
+            ),
+            React.createElement('div',{className:'text-center space-y-2'},
+              React.createElement('h2',{className:'text-2xl font-bold gt gc'},'小同志，你遇到什么问题'),
+              React.createElement('p',{className:'text-gray-600 text-sm'},'说来听听，我帮你分析分析')
+            ),
+            React.createElement('div',{className:'grid grid-cols-1 gap-2 w-full max-w-sm'},
+              ['最近工作压力很大，感觉快撑不住了','不知道该怎么选择，很迷茫','想学习提升但不知道从何开始'].map((q,i)=>
+                React.createElement('button',{key:i,onClick:()=>setInput(q),className:'text-left px-4 py-2.5 rounded-lg bg-[#141414] border border-[#262626] text-sm text-gray-500 hover:text-white hover:border-[#b91c1c]/40 transition-all'},q)
+              )
+            )
+          ),
 
-            {messages.map((msg,idx)=>{
-              const isUser = msg.role==='user';
-              return (
-                <div key={msg.id} className={`flex gap-3 animate-slide-up ${isUser?'flex-row-reverse':''}`}>
-                  <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border" style={{
-                    background:isUser?'#262626':'linear-gradient(135deg,#b91c1c,#450a0a)',
-                    borderColor:isUser?'#333':'rgba(220,38,38,0.3)'
-                  }}>
-                    <span className={isUser?'text-gray-600':'text-[#fbbf24]'}><I.Book/></span>
-                  </div>
-                  <div className={`max-w-[75%] ${isUser?'items-end':'items-start'} flex flex-col`}>
-                    <span className={`text-[10px] mb-1 ${isUser?'text-gray-600':'text-[#f87171]'}`}>{isUser?'小同志':'教员'}</span>
-                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
-                      isUser?'bg-[#b91c1c]/20 text-gray-300 rounded-tr-sm border border-[#b91c1c]/20':'bg-[#141414] text-gray-200 rounded-tl-sm border border-[#262626]'
-                    }`}>
-                      {msg.content}
-                    </div>
-                  </div>
-                </div>
+          messages.map((msg,idx)=>{
+            const isUser=msg.role==='user';
+            return React.createElement('div',{key:msg.id,className:`flex gap-3 su ${isUser?'flex-row-reverse':''}`,style:{animationDelay:`${idx*0.05}s`}},
+              React.createElement('div',{className:'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border text-sm',
+                style:{background:isUser?'#262626':'linear-gradient(135deg,#b91c1c,#450a0a)',borderColor:isUser?'#333':'rgba(220,38,38,0.3)',color:isUser?'#666':'#fbbf24'}},
+                isUser?'同':'教'
+              ),
+              React.createElement('div',{className:`max-w-[75%] ${isUser?'items-end':'items-start'} flex flex-col`},
+                React.createElement('span',{className:`text-[10px] mb-1 ${isUser?'text-gray-600':'text-[#f87171]'}`},isUser?'小同志':'教员'),
+                React.createElement('div',{className:`px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${isUser?'bg-[#b91c1c]/20 text-gray-300 rounded-tr-sm border border-[#b91c1c]/20':'bg-[#141414] text-gray-200 rounded-tl-sm border border-[#262626]'}`},msg.content)
+              )
+            );
+          }),
+          React.createElement('div',{ref:messagesEndRef})
+        ),
+
+        // Input
+        React.createElement('div',{className:'px-4 pb-3 pt-2 border-t border-[#1a1a1a]'},
+          React.createElement('div',{className:'relative max-w-2xl mx-auto flex items-end gap-2 bg-[#141414] border border-[#262626] rounded-xl p-2 focus-within:border-[#b91c1c]/40 transition-all'},
+            React.createElement('textarea',{value:input,onChange:e=>setInput(e.target.value),onKeyDown:handleKey,
+              placeholder:'小同志，说说你的问题...',rows:1,
+              className:'flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none max-h-24 py-2 px-2 leading-relaxed outline-none',
+              style:{minHeight:'36px'}}),
+            React.createElement('button',{onClick:handleSend,disabled:!input.trim()||isLoading,
+              className:'flex-shrink-0 w-8 h-8 rounded-lg bg-[#b91c1c] hover:bg-[#dc2626] disabled:bg-[#262626] disabled:opacity-50 flex items-center justify-center transition-all active:scale-95'},
+              isLoading?'⏳':'➤'
+            )
+          ),
+          React.createElement('p',{className:'text-center text-[10px] text-gray-800 mt-1.5'},'Enter发送 · Shift+Enter换行')
+        )
+      ),
+
+      // Right Panel: Three Layers
+      React.createElement('div',{className:'w-[400px] border-l border-[#1a1a1a] flex flex-col bg-[#0d0d0d] hidden lg:flex'},
+        // Layer 1: Thinking Stream
+        React.createElement('div',{className:'flex-1 border-b border-[#1a1a1a] min-h-0 overflow-hidden flex flex-col'},
+          React.createElement('div',{className:'text-xs text-gray-600 px-3 pt-3 pb-1 font-medium tracking-wider'},'💭 思考流 · 教员的内心独白'),
+          React.createElement('div',{className:'flex-1 overflow-y-auto px-3 pb-3'},
+            thinkingEvents.length===0&&React.createElement('div',{className:'text-gray-700 text-sm italic mt-4'},'等待思考...'),
+            thinkingEvents.map((e,i)=>
+              React.createElement('div',{key:i,className:`ti ${e.is_revert?'rv':'nm'}`,style:{animationDelay:`${i*0.05}s`}},
+                React.createElement('span',{className:'mr-2'},e.emotion),
+                React.createElement('span',{className:e.is_revert?'rl':'text-gray-300'},e.text),
+                e.is_revert&&React.createElement('span',{className:'text-red-400 text-xs ml-2'},'(修正)')
+              )
+            ),
+            thinkingEvents.length>0&&phase==='thinking'&&React.createElement('div',{className:'tc mt-2'})
+          )
+        ),
+
+        // Layer 2: Cognitive Structure
+        React.createElement('div',{className:'flex-1 border-b border-[#1a1a1a] min-h-0 overflow-hidden flex flex-col'},
+          React.createElement('div',{className:'text-xs text-gray-600 px-3 pt-3 pb-1 font-medium tracking-wider'},'🧠 认知结构 · 凝结的结论'),
+          React.createElement('div',{className:'flex-1 overflow-y-auto px-3 pb-3'},
+            (!cognitiveGraph||!cognitiveGraph.nodes||cognitiveGraph.nodes.length===0)&&React.createElement('div',{className:'text-gray-700 text-sm italic mt-4'},'认知节点随思考深入而生长...'),
+            cognitiveGraph&&cognitiveGraph.nodes&&cognitiveGraph.nodes.map((node,i)=>{
+              const labels={main_contradiction:'主要矛盾',insight:'洞察',breakthrough:'突破口',conclusion:'结论'};
+              return React.createElement('div',{key:node.id,className:`cn ${node.type==='main_contradiction'?'mc':node.type==='insight'?'in':node.type==='breakthrough'?'bt':'cl'}`,style:{animationDelay:`${i*0.15}s`}},
+                React.createElement('div',{className:'flex items-center gap-2 mb-1'},
+                  React.createElement('div',{className:'w-2 h-2 rounded-full',style:{background:node.color}}),
+                  React.createElement('span',{className:'text-xs font-medium opacity-70'},labels[node.type]||node.type)
+                ),
+                React.createElement('div',{className:'text-sm leading-relaxed'},node.full_content)
               );
-            })}
-            <div ref={messagesEndRef}/>
-          </div>
+            })
+          )
+        ),
 
-          {/* Input */}
-          <div className="px-4 pb-3 pt-2 border-t border-[#1a1a1a]">
-            <div className="relative max-w-2xl mx-auto flex items-end gap-2 bg-[#141414] border border-[#262626] rounded-xl p-2 focus-within:border-[#b91c1c]/40 transition-all">
-              <textarea value={input} onChange={e=>setInput(e.target.value)} onKeyDown={handleKey}
-                placeholder="小同志，说说你的问题..." rows={1}
-                className="flex-1 bg-transparent text-sm text-gray-200 placeholder-gray-700 resize-none max-h-24 py-2 px-2 leading-relaxed outline-none"
-                style={{minHeight:'36px'}}/>
-              <button onClick={handleSend} disabled={!input.trim()||isLoading}
-                className="flex-shrink-0 w-8 h-8 rounded-lg bg-[#b91c1c] hover:bg-[#dc2626] disabled:bg-[#262626] disabled:opacity-50 flex items-center justify-center transition-all active:scale-95">
-                {isLoading?<span className="text-white"><I.Loader/></span>:<span className="text-white"><I.Send/></span>}
-              </button>
-            </div>
-            <p className="text-center text-[10px] text-gray-800 mt-1.5">Enter发送 · Shift+Enter换行</p>
-          </div>
-        </div>
-
-        {/* Right Panel: Thinking + Cognitive + Quotes */}
-        <div className="w-[380px] border-l border-[#1a1a1a] flex flex-col bg-[#0d0d0d] hidden lg:flex">
-          {/* Thinking Stream */}
-          <div className="flex-1 border-b border-[#1a1a1a] min-h-0">
-            <ThinkingStream events={thinkingEvents}/>
-          </div>
-
-          {/* Cognitive Graph */}
-          <div className="flex-1 border-b border-[#1a1a1a] min-h-0">
-            <CognitiveGraph graphData={cognitiveGraph}/>
-          </div>
-
-          {/* Mao Quotes */}
-          <div className="max-h-[200px] overflow-y-auto">
-            <MaoQuoteCards quotes={maoQuotes}/>
-          </div>
-        </div>
-      </div>
-    </div>
+        // Layer 3: Mao Quotes
+        React.createElement('div',{className:'max-h-[200px] overflow-y-auto flex-shrink-0'},
+          maoQuotes.length>0&&React.createElement('div',{className:'text-xs text-gray-600 px-3 pt-3 pb-1 font-medium tracking-wider'},'📖 毛选原文 · 实时匹配'),
+          React.createElement('div',{className:'px-3 pb-3 space-y-2'},
+            maoQuotes.map((q,i)=>
+              React.createElement('div',{key:i,className:'mq',style:{animationDelay:`${i*0.2}s`}},
+                React.createElement('p',{className:'text-gray-300 text-sm italic leading-relaxed gc'},`"${q.text}"`),
+                React.createElement('p',{className:'text-gray-500 text-xs mt-1'},`——${q.source}${q.date?' · '+q.date:''}`)
+              )
+            )
+          )
+        )
+      )
+    )
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+// Load React from CDN
+const script1=document.createElement('script');
+script1.src='https://unpkg.com/react@18/umd/react.production.min.js';
+script1.crossOrigin='anonymous';
+script1.onload=()=>{
+  const script2=document.createElement('script');
+  script2.src='https://unpkg.com/react-dom@18/umd/react-dom.production.min.js';
+  script2.crossOrigin='anonymous';
+  script2.onload=()=>{
+    ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+  };
+  document.head.appendChild(script2);
+};
+document.head.appendChild(script1);
 </script>
 </body>
 </html>
