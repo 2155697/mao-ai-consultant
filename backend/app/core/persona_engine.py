@@ -15,6 +15,7 @@ from typing import Any, Dict, List, Optional, Tuple, AsyncGenerator
 import yaml
 
 from app.core.config import settings
+from app.models.schemas import ChatChunk
 
 
 class PersonaEngine:
@@ -329,110 +330,108 @@ class PersonaEngine:
 行动引导：{sig.get('action_response', '')}
 相关引用：{', '.join(sig.get('core_quotes', [])[:2])}"""
 
-    async def generate_stream(self, user_message: str, history: Optional[List[Dict]] = None) -> AsyncGenerator[Any, None]:
-        from app.models.schemas import ChatChunk, ChatMessage
-
+    async def generate_stream(self, user_message: str, history: Optional[List[Dict]] = None,
+                              llm_stream_func=None) -> AsyncGenerator[Any, None]:
         self.ensure_loaded()
-        signature = self.signature_match(user_message)
-        rag_results = self.rag_retrieve(user_message, top_k=3)
+        matched_sig = self.signature_match(user_message)
+        rag_results = self.rag_retrieve(user_message, top_k=settings.RAG_TOP_K)
         system_prompt = self.build_system_prompt(user_message)
 
-        if settings.is_mock_mode():
-            async for chunk in self._mock_stream(user_message, signature, rag_results):
+        async def _wrap_chunks(source):
+            async for c in source:
+                if isinstance(c, ChatChunk):
+                    yield c
+                elif isinstance(c, dict):
+                    yield ChatChunk(**c)
+                else:
+                    yield c
+
+        if llm_stream_func is not None:
+            async for chunk in _wrap_chunks(self._stream_via_llm(
+                system_prompt, user_message, llm_stream_func, history,
+                matched_sig, rag_results
+            )):
                 yield chunk
             return
 
-        from app.services.llm_client import LLMClient
-        client = LLMClient()
-        history_msgs = [ChatMessage(**h) for h in (history or [])]
-        history_dict = [{"role": m.role, "content": m.content} for m in history_msgs]
+        async for chunk in _wrap_chunks(self._stream_mock(
+            user_message, matched_sig, rag_results, system_prompt
+        )):
+            yield chunk
 
+    async def _stream_via_llm(
+        self, system_prompt: str, query: str,
+        llm_stream_func, history,
+        matched_sig, rag_results
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         current_thinking = ""
         has_sent_structure = False
         has_sent_quotes = False
 
-        async for chunk in client.stream(system_prompt, user_message, history_dict):
+        async for chunk in llm_stream_func(system_prompt, query, history):
             if chunk["type"] == "reasoning":
                 current_thinking += chunk["content"]
-                yield ChatChunk(
-                    type="thinking_stream",
-                    data=chunk["content"],
-                    thinking_step={
+                yield {
+                    "type": "thinking_stream",
+                    "data": chunk["content"],
+                    "thinking_step": {
                         "id": f"ts_{hash(current_thinking) & 0xFFFFFF}",
-                        "name": "思考",
-                        "content": chunk["content"],
+                        "name": "思考", "content": chunk["content"],
                     },
-                )
+                }
                 if len(current_thinking) > 50 and not has_sent_structure:
                     has_sent_structure = True
-                    yield ChatChunk(
-                        type="cognitive_structure",
-                        data=json.dumps({
-                            "nodes": [{"id": "1", "label": user_message[:20], "type": "question", "confidence": 0.8},
-                                      {"id": "2", "label": signature["name"] if signature else "分析", "type": "insight", "confidence": 0.7}],
-                            "edges": [{"from": "1", "to": "2"}],
-                        }),
-                    )
+                    yield {"type": "cognitive_structure", "data": json.dumps({
+                        "nodes": [{"id": "1", "label": query[:20], "type": "question", "confidence": 0.8},
+                                  {"id": "2", "label": matched_sig["name"] if matched_sig else "分析", "type": "insight", "confidence": 0.7}],
+                        "edges": [{"from": "1", "to": "2"}],
+                    })}
                 if len(current_thinking) > 30 and not has_sent_quotes:
                     has_sent_quotes = True
                     if rag_results:
                         q = rag_results[0]
-                        yield ChatChunk(
-                            type="mao_quote",
-                            data=json.dumps({"text": q["text"][:100], "source": f"卷{q.get('volume', '?')}相关段落"}),
-                        )
+                        yield {"type": "mao_quote", "data": json.dumps({"text": q["text"][:100], "source": f"卷{q.get('volume', '?')}相关段落"})}
             elif chunk["type"] == "content":
-                yield ChatChunk(type="content", data=chunk["content"])
+                yield {"type": "content", "data": chunk["content"]}
             elif chunk["type"] == "error":
-                yield ChatChunk(type="error", data=chunk["content"])
+                yield {"type": "error", "data": chunk["content"]}
+        yield {"type": "done"}
 
-        yield ChatChunk(type="done")
-
-    async def _mock_stream(self, user_message: str, signature: Optional[Dict[str, Any]], rag_results: List[Dict[str, Any]]) -> AsyncGenerator[Any, None]:
-        from app.models.schemas import ChatChunk
-
+    async def _stream_mock(
+        self, query: str,
+        signature: Optional[Dict[str, Any]],
+        rag_results: List[Dict[str, Any]],
+        system_prompt: str = ""
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         await asyncio.sleep(0.1)
-
         thinking_steps = [
             "嗯，小同志说说情况...",
-            f"让我想想...这个{self._get_topic(user_message)}问题...",
+            f"让我想想...这个{self._get_topic(query)}问题...",
             "抓主要矛盾...",
             "引用我以前的文章...",
         ]
-
         for i, step in enumerate(thinking_steps):
             await asyncio.sleep(0.2)
-            yield ChatChunk(
-                type="thinking_stream",
-                data=step,
-                thinking_step={"id": f"ts_{i}", "name": "思考", "content": step},
-            )
-
-        yield ChatChunk(
-            type="cognitive_structure",
-            data=json.dumps({
-                "nodes": [
-                    {"id": "1", "label": self._get_topic(user_message), "type": "question", "confidence": 0.8},
-                    {"id": "2", "label": signature["name"] if signature else "矛盾分析", "type": "main_contradiction", "confidence": 0.85},
-                    {"id": "3", "label": "调查研究+具体分析", "type": "breakthrough", "confidence": 0.75},
-                ],
-                "edges": [{"from": "1", "to": "2"}, {"from": "2", "to": "3"}],
-            }),
-        )
-
+            yield {"type": "thinking_stream", "data": step,
+                   "thinking_step": {"id": f"ts_{i}", "name": "思考", "content": step}}
+        yield {"type": "cognitive_structure", "data": json.dumps({
+            "nodes": [
+                {"id": "1", "label": self._get_topic(query), "type": "question", "confidence": 0.8},
+                {"id": "2", "label": signature["name"] if signature else "矛盾分析", "type": "main_contradiction", "confidence": 0.85},
+                {"id": "3", "label": "调查研究+具体分析", "type": "breakthrough", "confidence": 0.75},
+            ],
+            "edges": [{"from": "1", "to": "2"}, {"from": "2", "to": "3"}],
+        })}
         if rag_results:
             q = rag_results[0]
-            yield ChatChunk(
-                type="mao_quote",
-                data=json.dumps({"text": q["text"][:120], "source": f"《毛泽东选集》卷{q.get('volume', '?')}"}),
-            )
-
-        response = self._generate_mock_response(user_message, signature)
+            yield {"type": "mao_quote", "data": json.dumps({
+                "text": q["text"][:120], "source": f"《毛泽东选集》卷{q.get('volume', '?')}"
+            })}
+        response = self._generate_mock_response(query, signature)
         for char in response:
             await asyncio.sleep(0.02)
-            yield ChatChunk(type="content", data=char)
-
-        yield ChatChunk(type="done")
+            yield {"type": "content", "data": char}
+        yield {"type": "done"}
 
     def _get_topic(self, query: str) -> str:
         keywords = self._extract_query_keywords(query)
@@ -449,5 +448,4 @@ class PersonaEngine:
                 "骄傲自满": "虚心使人进步，骄傲使人落后。这只是万里长征第一步。",
             }
             return responses.get(signature["name"], "小同志，你说的情况我了解了。要抓住主要矛盾，调查研究，实事求是。")
-
         return "小同志，你遇到什么问题，说来听听。没有调查就没有发言权，先把情况说清楚。"
