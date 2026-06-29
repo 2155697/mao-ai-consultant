@@ -134,7 +134,7 @@ mao-ai-consultant/
 
 **后端**: FastAPI, jieba, PyYAML, networkx
 **前端**: React 19, TypeScript, Vite, Tailwind CSS, Framer Motion
-**模型**: 支持OpenAI兼容格式（推荐Kimi K2.6）
+**模型**: 支持OpenAI兼容格式
 
 ---
 
