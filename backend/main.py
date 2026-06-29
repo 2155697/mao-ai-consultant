@@ -1,41 +1,35 @@
-"""毛泽东风格AI咨询系统 v2.0 - FastAPI主入口"""
+"""
+FastAPI主入口 - 教员AI咨询系统
+"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
-import os
+from pathlib import Path
 
-from app.core.config import settings
-from app.api import chat
-
-STATIC_DIR = os.path.join(os.path.dirname(__file__), "static")
-os.makedirs(STATIC_DIR, exist_ok=True)
+from app.api.chat import router as chat_router
 
 app = FastAPI(
     title="教员AI咨询系统",
-    version="2.0.0",
-    description="基于Kimi K2.6的毛泽东风格AI一对一咨询系统 - 人格蒸馏v2",
+    description="基于毛选98万字原文的极致蒸馏版",
+    version="3.0.0",
 )
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(chat.router)
+# API路由
+app.include_router(chat_router, prefix="/api/v1")
 
-app.mount("/assets", StaticFiles(directory=STATIC_DIR), name="static")
-
-@app.get("/")
-async def root():
-    index_path = os.path.join(STATIC_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path)
-    return {"name": "教员AI咨询系统", "version": "2.0.0", "status": "running"}
+# 静态文件（前端构建产物）
+static_dir = Path(__file__).parent / "static"
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory=str(static_dir), html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=settings.DEBUG)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
