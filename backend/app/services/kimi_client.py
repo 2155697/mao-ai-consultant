@@ -1,4 +1,6 @@
-"""Kimi API客户端 - 支持kimi-k2.6推理模型的reasoning_content特性"""
+"""Kimi API客户端 - 支持kimi-k2.6推理模型的reasoning_content特性
+优化：边收reasoning边推送thinking步骤，降低首token延迟
+"""
 import os
 import json
 import asyncio
@@ -41,35 +43,25 @@ class KimiClient:
         messages.append({"role": "user", "content": user_message})
         return messages
     
-    def _parse_reasoning_to_steps(self, reasoning: str) -> List[ThinkingStep]:
-        """将模型的reasoning_content解析为5步思考链"""
+    def _extract_step_from_reasoning(self, reasoning: str, step_idx: int) -> str:
+        """从reasoning中提取指定步骤的内容"""
         steps_def = get_thinking_steps()
-        steps = []
+        if step_idx >= len(steps_def):
+            return ""
         
-        # 按段落分割reasoning
         paragraphs = [p.strip() for p in reasoning.split('\n') if p.strip()]
+        if not paragraphs:
+            return steps_def[step_idx]["description"]
         
-        for i, step_def in enumerate(steps_def):
-            # 为每个步骤分配对应的reasoning段落
-            start_idx = int(i * len(paragraphs) / 5)
-            end_idx = int((i + 1) * len(paragraphs) / 5)
-            step_content = '\n'.join(paragraphs[start_idx:end_idx]) if paragraphs else step_def["description"]
-            
-            # 截断过长的内容
-            if len(step_content) > 200:
-                step_content = step_content[:200] + "..."
-            
-            steps.append(ThinkingStep(
-                id=step_def["id"],
-                name=step_def["name"],
-                description=step_def["description"],
-                percentage=step_def["percentage"],
-                mao_quote=step_def["mao_quote"],
-                status="completed",
-                content=step_content if step_content else step_def["description"]
-            ))
+        start = int(step_idx * len(paragraphs) / 5)
+        end = int((step_idx + 1) * len(paragraphs) / 5)
+        step_paras = paragraphs[start:end]
         
-        return steps
+        content = ' '.join(step_paras)
+        if len(content) > 200:
+            content = content[:200] + "..."
+        
+        return content if content else steps_def[step_idx]["description"]
     
     async def _mock_stream_response(self, user_message: str) -> AsyncGenerator[ChatChunk, None]:
         """Mock模式：模拟流式响应"""
@@ -77,7 +69,6 @@ class KimiClient:
         
         thinking_steps_def = get_thinking_steps()
         
-        # 阶段1：思考过程
         for i, step_def in enumerate(thinking_steps_def):
             step = ThinkingStep(
                 id=step_def["id"],
@@ -85,18 +76,12 @@ class KimiClient:
                 description=step_def["description"],
                 percentage=step_def["percentage"],
                 mao_quote=step_def["mao_quote"],
-                status="completed"
+                status="completed",
+                content=self._generate_mock_thinking(step_def["id"], user_message)
             )
-            step.content = self._generate_mock_thinking(step_def["id"], user_message)
-            
-            yield ChatChunk(
-                type="thinking",
-                thinking_step=step,
-                overall_percentage=step_def["percentage"]
-            )
-            await asyncio.sleep(0.5)
+            yield ChatChunk(type="thinking", thinking_step=step, overall_percentage=step_def["percentage"])
+            await asyncio.sleep(0.3)
         
-        # 阶段2：生成回答
         mock_response = self._generate_mock_response(user_message)
         buffer = ""
         for char in mock_response:
@@ -108,18 +93,17 @@ class KimiClient:
         
         if buffer:
             yield ChatChunk(type="content", data=buffer)
-        
         yield ChatChunk(type="done", final_message=mock_response)
     
     def _generate_mock_thinking(self, step_id: str, user_message: str) -> str:
         thinkings = {
-            "deconstruct": f"让我先看看这个问题——'{user_message[:30]}...'这属于什么问题？从性质上看，这是关于实际工作中遇到的具体矛盾。",
-            "contradiction": "这里面的主要矛盾是什么？是主观愿望和客观条件之间的矛盾，还是方法论问题？矛盾的主要方面在哪里？",
-            "deep_analysis": "从实际情况出发，有利条件是——当事人有改变的意愿；不利条件是——可能缺乏经验或方法。要具体问题具体分析。",
-            "strategy": "战略上要藐视困难，相信问题一定能解决；战术上要重视困难，一步一步来，调查研究，找到具体方法。",
-            "conclusion": "本质是认识和实践的关系问题。要在实践中检验，在实践中调整，在实践中成长。"
+            "deconstruct": f"这个问题——'{user_message[:30]}...'属于什么性质？从实际出发分析。",
+            "contradiction": "主要矛盾是什么？矛盾的主要方面在哪？",
+            "deep_analysis": "有利条件和不利条件各是什么？",
+            "strategy": "战略上藐视，战术上重视，找到突破口。",
+            "conclusion": "本质是认识和实践的关系，在实践中检验。"
         }
-        return thinkings.get(step_id, "正在深入思考...")
+        return thinkings.get(step_id, "正在思考...")
     
     def _generate_mock_response(self, user_message: str) -> str:
         message_lower = user_message.lower()
@@ -127,58 +111,60 @@ class KimiClient:
         if any(kw in message_lower for kw in ["困难", "难", "压力", "累", "苦"]):
             return """小同志，我们的同志在困难的时候，要看到成绩，要看到光明，要提高我们的勇气。
 
-你说压力大，这个问题先要调查研究——是什么让你压力大？是任务太多？是方法不对？还是身体需要休息？
+你说压力大，先要调查研究——是什么让你压力大？是任务太多？是方法不对？还是身体需要休息？
 
-用矛盾分析法来看，这是你的主观能力和客观任务之间的矛盾。主要矛盾是什么？如果是任务和能力不匹配，那就分析：哪些任务可以分解，哪些可以求助，哪些需要学习新方法来提高效率。
+用矛盾分析法：这是你的主观能力和客观任务之间的矛盾。抓住了主要矛盾，问题就解决了一半。
 
-记住，星星之火，可以燎原。再大的困难，分解开来，一件一件解决，总能找到出路。关键是不要脱离实际，要实事求是。
+星星之火，可以燎原。再大的困难，分解开来，一件一件解决。关键是实事求是，不要脱离实际。
 
-没有调查就没有发言权。你先做个"调查"——把让你压力大的事情一条条写下来，分分类，看看哪些是主要的，哪些是次要的。抓住了主要矛盾，问题就解决了一半。"""
+没有调查就没有发言权。你把让你压力大的事情一条条写下来，分分类，看看哪些是主要的，哪些是次要的。"""
         
-        elif any(kw in message_lower for kw in ["选择", "决定", "换", "辞职", "选"]):
+        elif any(kw in message_lower for kw in ["选择", "决定", "换", "辞职", "选", "迷茫"]):
             return """小同志，没有调查就没有发言权。你首先要调查研究——
 
-你现在的情况，主要矛盾是什么？是这个选择本身的问题，还是你对问题认识不清的问题？
+你现在的情况，主要矛盾是什么？是这个选择本身的问题，还是你对问题认识不清？
 
-要用矛盾分析法：列出两种选择各自的有利条件和不利条件，一一对照。看看哪种选择能让主要矛盾朝着有利的方向转化。
+用矛盾分析法：列出两种选择各自的有利条件和不利条件，一一对照。哪种选择能让主要矛盾朝着有利的方向转化？
 
-关键是实事求是，从实际情况出发，不要凭主观想象做决定。"""
+关键是实事求是，从实际情况出发，不要凭主观想象做决定。道路是曲折的，前途是光明的。"""
         
         elif any(kw in message_lower for kw in ["批评", "被骂", "错", "失误"]):
             return """小同志，惩前毖后，治病救人嘛。批评是为了帮助，不是为了打击。
 
-有错误不怕，怕的是不承认错误，不改正错误。房子是应该经常打扫的，不打扫就会积满了灰尘。思想也是一样，经常打扫打扫，才能保持清醒。"""
+用矛盾分析法：批评的内容，哪些是对的？对的就接受。不对的也要想一想为什么会这样看。
+
+有错误不怕，怕的是不承认错误，不改正错误。房子是应该经常打扫的，不打扫就会积满了灰尘。思想也是一样，经常打扫才能保持清醒。"""
         
         elif any(kw in message_lower for kw in ["学习", "读书", "进步", "成长", "提升"]):
             return """小同志，学习、学习、再学习！人的正确思想，只能从社会实践中来。
 
 学习要同实际相结合。读书是学习，使用也是学习，而且是更重要的学习。
 
-你现在的学习，要抓住主要矛盾——你最缺的是什么？是理论知识？是实践经验？还是方法论？"""
+抓住主要矛盾——你最缺的是什么？是理论知识？是实践经验？还是方法论？学习要从感性认识上升到理性认识，再回到实践中去检验。"""
         
         else:
             return f"""小同志，你这个问题提得好。让我用实事求是的态度来分析一下。
 
-你说'{user_message[:50]}'，这个问题首先我要调查研究清楚。没有调查就没有发言权嘛。
+你说'{user_message[:50]}'，没有调查就没有发言权嘛。
 
-从矛盾论的角度来看，任何问题都有它的主要矛盾和次要矛盾。关键是实事求是，从实际情况出发。
+从矛盾论来看，任何问题都有主要矛盾和次要矛盾。关键是实事求是，从实际情况出发。
 
-道路是曲折的，前途是光明的。小同志，不要被眼前的困难吓倒，办法总比困难多。"""
+道路是曲折的，前途是光明的。不要被眼前的困难吓倒，办法总比困难多。"""
     
     async def stream_chat(self, user_message: str, history: Optional[List[ChatMessage]] = None) -> AsyncGenerator[ChatChunk, None]:
-        """流式聊天 - 利用kimi-k2.6的reasoning_content展示思考过程"""
+        """流式聊天 - 优化版：边收reasoning边推送thinking步骤"""
         if self.mock_mode:
             async for chunk in self._mock_stream_response(user_message):
                 yield chunk
             return
         
-        # 真实API调用
         try:
             messages = self._build_messages(user_message, history)
             
+            pushed_steps = set()
             reasoning_buffer = ""
             content_buffer = ""
-            has_sent_thinking = False
+            has_started_content = False
             
             stream = await self.client.chat.completions.create(
                 model=self.model,
@@ -193,35 +179,67 @@ class KimiClient:
                 if not delta:
                     continue
                 
-                # 收集reasoning_content（思考过程）
+                # 收集reasoning_content并实时推送
                 if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
                     reasoning_buffer += delta.reasoning_content
+                    
+                    steps_def = get_thinking_steps()
+                    total_steps = len(steps_def)
+                    
+                    # 估算当前步骤索引（基于buffer长度）
+                    estimated_step = min(int(len(reasoning_buffer) / 250), total_steps - 1)
+                    
+                    for i in range(estimated_step + 1):
+                        if i in pushed_steps:
+                            continue
+                        
+                        step_def = steps_def[i]
+                        step_content = self._extract_step_from_reasoning(reasoning_buffer, i)
+                        
+                        step = ThinkingStep(
+                            id=step_def["id"],
+                            name=step_def["name"],
+                            description=step_def["description"],
+                            percentage=step_def["percentage"],
+                            mao_quote=step_def["mao_quote"],
+                            status="completed",
+                            content=step_content
+                        )
+                        
+                        yield ChatChunk(
+                            type="thinking",
+                            thinking_step=step,
+                            overall_percentage=step_def["percentage"]
+                        )
+                        pushed_steps.add(i)
                 
-                # 收集content（最终回答）
+                # 收集并推送content
                 if delta.content:
-                    # 当content开始时，说明reasoning结束了，发送思考步骤
-                    if not has_sent_thinking and reasoning_buffer:
-                        has_sent_thinking = True
-                        thinking_steps = self._parse_reasoning_to_steps(reasoning_buffer)
-                        for step in thinking_steps:
-                            yield ChatChunk(
-                                type="thinking",
-                                thinking_step=step,
-                                overall_percentage=step.percentage
-                            )
+                    if not has_started_content:
+                        has_started_content = True
+                        # 确保所有5个步骤都已推送
+                        steps_def = get_thinking_steps()
+                        for i in range(5):
+                            if i not in pushed_steps:
+                                step_def = steps_def[i]
+                                step = ThinkingStep(
+                                    id=step_def["id"],
+                                    name=step_def["name"],
+                                    description=step_def["description"],
+                                    percentage=step_def["percentage"],
+                                    mao_quote=step_def["mao_quote"],
+                                    status="completed",
+                                    content=self._extract_step_from_reasoning(reasoning_buffer, i)
+                                )
+                                yield ChatChunk(
+                                    type="thinking",
+                                    thinking_step=step,
+                                    overall_percentage=step_def["percentage"]
+                                )
+                                pushed_steps.add(i)
                     
                     content_buffer += delta.content
                     yield ChatChunk(type="content", data=delta.content)
-            
-            # 如果只有reasoning没有content（模型把所有token都用在了思考上）
-            if not has_sent_thinking and reasoning_buffer:
-                thinking_steps = self._parse_reasoning_to_steps(reasoning_buffer)
-                for step in thinking_steps:
-                    yield ChatChunk(
-                        type="thinking",
-                        thinking_step=step,
-                        overall_percentage=step.percentage
-                    )
             
             yield ChatChunk(type="done", final_message=content_buffer)
             
