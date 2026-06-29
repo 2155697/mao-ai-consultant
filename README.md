@@ -1,125 +1,78 @@
-# 教员AI咨询系统
+# 教员AI咨询系统 v2.0
 
-> 基于 Kimi K2.6 推理模型的毛泽东风格一对一AI咨询平台
+> 不是风格模仿，是思维重建。基于McAdams三层人格模型 + CAPS动态图 + 认知结构引擎的深度人格蒸馏。
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-green.svg)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev)
-[![Kimi](https://img.shields.io/badge/Kimi-K2.6-red.svg)](https://kimi.moonshot.cn)
+## 核心理念
 
-## 项目介绍
+当前大多数"角色扮演"AI停留在**特质层**——模仿语言风格、背诵语录。我们的目标是达到**适应性+叙事层**——让AI真正内化和运用教员的底层思维系统。
 
-本项目是一个深度蒸馏毛泽东思想与语言风格的AI咨询系统。不是简单的语录背诵或风格模仿，而是通过**System Prompt工程 + 思维链可视化 + 矛盾分析法**，让AI真正内化了教员的底层思维体系。
+## 架构设计
 
-### 核心特性
-
-| 特性 | 说明 |
-|------|------|
-| **5步思考链** | 问题解构 → 矛盾识别 → 深度分析 → 策略构建 → 总结升华 |
-| **推理可视化** | 利用Kimi K2.6的reasoning_content，动态展示教员的思考过程 |
-| **毛泽东思想注入** | 2655+字符深度System Prompt，覆盖矛盾论、实践论、群众路线 |
-| **语言风格蒸馏** | 比喻、排比对偶、先破后立、辩证分析、军事术语政治化 |
-| **SSE流式输出** | 逐字显示回答，思考过程实时可视化 |
-| **双模式支持** | Mock模式（无需API Key）+ 真实Kimi API模式 |
-
-## 技术架构
+五层蒸馏模型：
 
 ```
-Frontend (React 18 + Tailwind CSS v3)
-    |
-    | SSE (EventSource)
-    v
-Backend (FastAPI + Uvicorn)
-    |
-    | OpenAI Compatible API
-    v
-Kimi K2.6 (Moonshot AI)
-    reasoning_content + content
+L5 表现层：三层展示架构（思考流 + 认知结构 + 毛选原文）
+L4 推理层：Kimi K2.6 + reasoning_content解析引擎
+L3 人格建模层：CAPS动态图 + 认知结构引擎 + 思维模板
+L2 记忆层：毛选知识库（向量检索 + 原文匹配 + 语境关联）
+L1 数据层：毛选四卷结构化（哲学/战略/方法/语言/叙事）
 ```
+
+### 三层展示架构
+
+| 层级 | 内容 | 展示方式 |
+|------|------|----------|
+| **思考流** | 教员的内心独白 | 逐字流动，有停顿、顿悟、回退 |
+| **认知结构** | 阶段性结论凝结 | 动态思维导图，节点随思考生长 |
+| **毛选原文** | 实时匹配的著作引用 | 优雅卡片，AI自行衡量关联度 |
+
+### 动态进度条
+
+反映教员的真实思考节奏——可快可慢可回退可跳跃。
+
+## 核心技术
+
+- **McAdams三层人格模型**：特质 → 适应性 → 叙事
+- **CAPS动态图**：if-then情境-行为签名
+- **认知结构引擎**：动态演化的思维节点网络
+- **System Prompt v2.0**：2115字符深度人格蒸馏
+- **毛选知识库**：20+条经典原文精准匹配
 
 ## 快速开始
 
 ```bash
-# 1. 克隆
 git clone https://github.com/2155697/mao-ai-consultant.git
 cd mao-ai-consultant/backend
-
-# 2. 安装依赖
-pip install -r requirements.txt
-
-# 3. 配置API Key（可选，不配置则使用Mock模式）
+pip install fastapi uvicorn sse-starlette openai pydantic
 export MOONSHOT_API_KEY="sk-your-api-key"
-export MOCK_MODE="false"
-
-# 4. 启动
 python main.py
-
-# 5. 访问 http://localhost:8000
-```
-
-## API接口
-
-```bash
-# 流式对话
-curl -N -X POST http://localhost:8000/api/v1/chat/stream \
-  -H "Content-Type: application/json" \
-  -d '{"message":"教员，我最近很迷茫","stream":true}'
-
-# 健康检查
-curl http://localhost:8000/api/v1/health
-```
-
-## System Prompt 设计
-
-System Prompt是整个系统的灵魂，详见 `backend/app/core/mao_system_prompt.py`，包含：
-
-1. **核心身份特征** - 毛泽东的生平与身份定位
-2. **思维体系** - 矛盾分析法、实事求是、群众路线、战略思维
-3. **语言风格** - 7大修辞特征 + 语气特征
-4. **回答结构模板** - 分析类/建议类的标准回答框架
-5. **思考过程规则** - 5步思考链的强制要求
-6. **Few-shot示例** - 3个典型对话示例
-
-## 思考过程可视化
-
-```
-Step 1 [15%] 问题解构  - "调查就是解决问题"
-Step 2 [35%] 矛盾识别  - "主要矛盾决定事物性质"
-Step 3 [55%] 深度分析  - "没有调查就没有发言权"
-Step 4 [75%] 策略构建  - "战略藐视，战术重视"
-Step 5 [100%] 总结升华 - "道路曲折，前途光明"
+# 浏览器打开 http://localhost:8000
 ```
 
 ## 项目结构
 
 ```
 backend/
-├── main.py                      # FastAPI主入口
-├── requirements.txt             # Python依赖
+├── main.py                          # FastAPI主入口
+├── requirements.txt
+├── DESIGN.md                        # 完整架构设计文档
 ├── static/
-│   └── index.html              # 前端单页应用（React 18 + Tailwind）
+│   └── index.html                  # 三层展示架构前端
 └── app/
     ├── core/
-    │   ├── config.py           # 系统配置
-    │   └── mao_system_prompt.py # System Prompt核心
+    │   ├── config.py               # 系统配置
+    │   ├── mao_system_prompt.py    # v1 System Prompt
+    │   └── mao_persona_v2.py       # ⭐ v2核心引擎
     ├── api/
-    │   └── chat.py             # SSE流式API
+    │   └── chat.py                 # SSE流式API
     ├── services/
-    │   └── kimi_client.py      # Kimi API客户端
+    │   └── kimi_client.py          # v1+v2混合客户端
     └── models/
-        └── schemas.py          # 数据模型
+        └── schemas.py              # 数据模型
 ```
-
-## 路线图
-
-- [x] v1.0 基础对话 + Mock模式 + 思考可视化
-- [ ] v1.1 接入RAG知识库（毛选向量化检索）
-- [ ] v1.2 对话历史持久化
-- [ ] v1.3 用户系统 + 登录/支付
-- [ ] v1.4 毛选原文引用标注
 
 ## License
 
-MIT License
+MIT
 
 > "没有调查就没有发言权" —— 毛泽东
