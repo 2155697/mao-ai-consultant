@@ -218,7 +218,7 @@ class KimiClient:
                                 )
                                 stream_idx += 1
 
-                    # 🔥 关键优化：边收reasoning边尝试推送步骤
+                    # 关键优化：边收reasoning边尝试推送步骤
                     steps_def = get_thinking_steps()
                     total_steps = len(steps_def)
                     estimated_step = min(int(len(reasoning_buffer) / 250), total_steps - 1)
