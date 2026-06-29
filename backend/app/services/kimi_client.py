@@ -9,6 +9,13 @@ from openai import AsyncOpenAI, OpenAIError
 
 from ..core.config import settings
 from ..core.mao_system_prompt import get_full_system_prompt, get_thinking_steps
+from ..core.mao_persona_v2 import (
+    generate_system_prompt_v2,
+    parse_reasoning_to_stream,
+    extract_cognitive_nodes,
+    match_quotes,
+    CognitiveStructure, CognitiveNode,
+)
 from ..models.schemas import ChatMessage, ChatChunk, ThinkingStep
 
 class KimiClient:
@@ -17,7 +24,7 @@ class KimiClient:
     def __init__(self):
         self.mock_mode = settings.MOCK_MODE
         self.model = settings.MOONSHOT_MODEL
-        self.system_prompt = get_full_system_prompt()
+        self.system_prompt = generate_system_prompt_v2()
         
         if not self.mock_mode:
             try:
@@ -49,10 +56,12 @@ class KimiClient:
         if step_idx >= len(steps_def):
             return ""
         
+        # 按段落分割
         paragraphs = [p.strip() for p in reasoning.split('\n') if p.strip()]
         if not paragraphs:
             return steps_def[step_idx]["description"]
         
+        # 计算该步骤对应的段落范围
         start = int(step_idx * len(paragraphs) / 5)
         end = int((step_idx + 1) * len(paragraphs) / 5)
         step_paras = paragraphs[start:end]
@@ -161,8 +170,12 @@ class KimiClient:
         try:
             messages = self._build_messages(user_message, history)
             
+            # 记录已推送的步骤，避免重复
             pushed_steps = set()
             reasoning_buffer = ""
+            sentence_buffer = ""  # v2: sentence buffer
+            stream_idx = 0  # v2: thinking stream index
+            sent_quote_texts = set()  # v2: dedup quotes
             content_buffer = ""
             has_started_content = False
             
@@ -179,23 +192,44 @@ class KimiClient:
                 if not delta:
                     continue
                 
-                # 收集reasoning_content并实时推送
+                # 收集reasoning_content
                 if hasattr(delta, 'reasoning_content') and delta.reasoning_content:
                     reasoning_buffer += delta.reasoning_content
-                    
+
+                    # ===== v2: 思考流事件（句子缓冲）=====
+                    sentence_buffer += delta.reasoning_content
+                    # 当遇到句子结束标记时，输出完整句子
+                    while any(c in sentence_buffer for c in ['。', '！', '？', '\n', '.', '!', '?']):
+                        end_idx = min((sentence_buffer.find(c) + 1 for c in ['。', '！', '？', '\n', '.', '!', '?'] if c in sentence_buffer), default=len(sentence_buffer))
+                        sentence = sentence_buffer[:end_idx].strip()
+                        sentence_buffer = sentence_buffer[end_idx:]
+                        if len(sentence) > 5:
+                            stream_events = parse_reasoning_to_stream(sentence)
+                            for event in stream_events:
+                                yield ChatChunk(
+                                    type="thinking_stream", data=event["text"],
+                                    thinking_step=ThinkingStep(
+                                        id=f"ts_{stream_idx}", name=event["emotion"],
+                                        description=event["text"][:40],
+                                        percentage=min(50, int(len(reasoning_buffer)/20)),
+                                        mao_quote="", status="active", content=event["text"]
+                                    ),
+                                    overall_percentage=min(50, int(len(reasoning_buffer)/20))
+                                )
+                                stream_idx += 1
+
+                    # 🔥 关键优化：边收reasoning边尝试推送步骤
                     steps_def = get_thinking_steps()
                     total_steps = len(steps_def)
-                    
-                    # 估算当前步骤索引（基于buffer长度）
                     estimated_step = min(int(len(reasoning_buffer) / 250), total_steps - 1)
-                    
+
                     for i in range(estimated_step + 1):
                         if i in pushed_steps:
                             continue
-                        
+
                         step_def = steps_def[i]
                         step_content = self._extract_step_from_reasoning(reasoning_buffer, i)
-                        
+
                         step = ThinkingStep(
                             id=step_def["id"],
                             name=step_def["name"],
@@ -205,13 +239,38 @@ class KimiClient:
                             status="completed",
                             content=step_content
                         )
-                        
+
                         yield ChatChunk(
                             type="thinking",
                             thinking_step=step,
                             overall_percentage=step_def["percentage"]
                         )
                         pushed_steps.add(i)
+
+                    # ===== v2: 认知结构 =====
+                    if len(reasoning_buffer) > 300:
+                        nodes = extract_cognitive_nodes(reasoning_buffer)
+                        if nodes:
+                            cog = CognitiveStructure()
+                            for n in nodes:
+                                cog.add_node(CognitiveNode(id=f"n{len(cog.nodes)}", node_type=n["type"], content=n["content"], confidence=0.7, status="forming"))
+                            yield ChatChunk(
+                                type="cognitive_structure", data="",
+                                thinking_step=ThinkingStep(id="cog", name="认知结构", description="", percentage=60, mao_quote="", status="completed", content=str(cog.get_graph_data())),
+                                overall_percentage=60
+                            )
+
+                    # ===== v2: 毛选引用（去重）=====
+                    if len(reasoning_buffer) > 200:
+                        quotes = match_quotes(reasoning_buffer, 2)
+                        for q in quotes:
+                            if q.text not in sent_quote_texts:
+                                sent_quote_texts.add(q.text)
+                                yield ChatChunk(
+                                    type="mao_quote", data=f"{q.text} ——{q.source}（{q.date}）",
+                                    thinking_step=ThinkingStep(id=f"q_{q.source}", name="毛选原文", description=f"{q.source}·{q.date}", percentage=70, mao_quote=q.text, status="completed", content=q.context),
+                                    overall_percentage=70
+                                )
                 
                 # 收集并推送content
                 if delta.content:
