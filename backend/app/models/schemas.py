@@ -38,7 +38,7 @@ class ThinkingProgress(BaseModel):
 
 class ChatChunk(BaseModel):
     """流式输出块"""
-    type: Literal["thinking", "content", "done", "error"] = "content"
+    type: Literal["thinking", "thinking_stream", "cognitive_structure", "mao_quote", "content", "done", "error"] = "content"
     data: Optional[str] = None
     thinking_step: Optional[ThinkingStep] = None
     overall_percentage: Optional[int] = None
