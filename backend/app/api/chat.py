@@ -1,12 +1,10 @@
-"""聊天API端点"""
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import StreamingResponse
+"""聊天API端点 v2.0 - 支持三层输出"""
+from fastapi import APIRouter
 from sse_starlette.sse import EventSourceResponse
 import json
-import asyncio
 
-from ..models.schemas import ChatRequest, ChatResponse, ChatChunk, HealthCheck
-from ..services.kimi_client import get_kimi_client
+from ..models.schemas import ChatRequest
+from ..services.kimi_client_v2 import get_kimi_client_v2
 from ..core.config import settings
 from datetime import datetime
 
@@ -14,15 +12,17 @@ router = APIRouter(prefix="/api/v1", tags=["chat"])
 
 @router.post("/chat/stream")
 async def chat_stream(request: ChatRequest):
-    """SSE流式聊天接口
+    """SSE流式聊天 - v2完整引擎
     
-    返回事件流：
-    - thinking_progress: 思考过程更新
-    - content: 内容片段
+    返回事件类型:
+    - thinking_stream: 思考流事件（内心独白）
+    - cognitive_structure: 认知结构数据（思维导图）
+    - mao_quote: 毛选原文引用
+    - content: 回答内容片段
     - done: 完成
     - error: 错误
     """
-    client = get_kimi_client()
+    client = get_kimi_client_v2()
     
     async def event_generator():
         try:
@@ -40,48 +40,15 @@ async def chat_stream(request: ChatRequest):
                 "data": json.dumps({"error": str(e)}, ensure_ascii=False)
             }
     
-    return EventSourceResponse(
-        event_generator(),
-        media_type="text/event-stream"
-    )
-
-@router.post("/chat")
-async def chat(request: ChatRequest):
-    """非流式聊天接口（用于测试）"""
-    client = get_kimi_client()
-    
-    full_content = ""
-    thinking_steps = []
-    
-    try:
-        async for chunk in client.stream_chat(
-            user_message=request.message,
-            history=request.history
-        ):
-            if chunk.type == "content" and chunk.data:
-                full_content += chunk.data
-            elif chunk.type == "thinking" and chunk.thinking_step:
-                thinking_steps.append(chunk.thinking_step)
-            elif chunk.type == "done" and chunk.final_message:
-                full_content = chunk.final_message
-        
-        return ChatResponse(
-            message=full_content,
-            thinking_steps=thinking_steps,
-            session_id=request.session_id or "default",
-            model=settings.MOONSHOT_MODEL,
-            timestamp=datetime.now().isoformat()
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    return EventSourceResponse(event_generator(), media_type="text/event-stream")
 
 @router.get("/health")
 async def health_check():
     """健康检查"""
-    return HealthCheck(
-        status="ok",
-        version=settings.APP_VERSION,
-        mock_mode=settings.MOCK_MODE,
-        model=settings.MOONSHOT_MODEL,
-        timestamp=datetime.now().isoformat()
-    )
+    return {
+        "status": "ok",
+        "version": "2.0.0",
+        "mock_mode": settings.MOCK_MODE,
+        "model": settings.MOONSHOT_MODEL,
+        "timestamp": datetime.now().isoformat()
+    }
